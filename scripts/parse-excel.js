@@ -37,13 +37,27 @@ function parseExcelFile(filePath, categoryId) {
     
     // 尝试找到题目、选项、答案列
     const questionCol = findColumnIndex(headers, ['题目', '问题', '试题', '题干', 'question']);
-    const optionACol = findColumnIndex(headers, ['A', '选项A', 'A选项']);
-    const optionBCol = findColumnIndex(headers, ['B', '选项B', 'B选项']);
-    const optionCCol = findColumnIndex(headers, ['C', '选项C', 'C选项']);
-    const optionDCol = findColumnIndex(headers, ['D', '选项D', 'D选项']);
     const answerCol = findColumnIndex(headers, ['答案', '正确答案', 'answer', '正确']);
     const explanationCol = findColumnIndex(headers, ['解析', '说明', '解释', 'explanation']);
-    
+
+    // 找选项列——优先检测 "选择项" 标记列（该列及后续3列即为 ABCD 选项）
+    const optionMarkerCol = findColumnIndex(headers, ['选择项', '选项列']);
+    let optionACol, optionBCol, optionCCol, optionDCol;
+
+    if (optionMarkerCol >= 0 && optionMarkerCol + 3 < headers.length) {
+      optionACol = optionMarkerCol;
+      optionBCol = optionMarkerCol + 1;
+      optionCCol = optionMarkerCol + 2;
+      optionDCol = optionMarkerCol + 3;
+      console.log(`  选项列: 从"选择项"标记检测 A=${optionACol} B=${optionBCol} C=${optionCCol} D=${optionDCol}`);
+    } else {
+      // 回退：按列名 ABCD 匹配
+      optionACol = findColumnIndex(headers, ['A', '选项A', 'A选项']);
+      optionBCol = findColumnIndex(headers, ['B', '选项B', 'B选项']);
+      optionCCol = findColumnIndex(headers, ['C', '选项C', 'C选项']);
+      optionDCol = findColumnIndex(headers, ['D', '选项D', 'D选项']);
+    }
+
     console.log(`  题目列: ${questionCol}, 答案列: ${answerCol}`);
     
     // 解析题目
@@ -70,6 +84,8 @@ function parseExcelFile(filePath, categoryId) {
         else if (answerText.includes('B')) correctAnswer = 1;
         else if (answerText.includes('C')) correctAnswer = 2;
         else if (answerText.includes('D')) correctAnswer = 3;
+        else if (answerText.includes('对') || answerText.includes('正确') || answerText.includes('√')) correctAnswer = 0;
+        else if (answerText.includes('错') || answerText.includes('错误') || answerText.includes('×') || answerText.includes('X')) correctAnswer = 1;
         else {
           // 尝试解析数字
           const num = parseInt(answerText);
